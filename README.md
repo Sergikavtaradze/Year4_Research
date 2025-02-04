@@ -1,3 +1,6 @@
+# This code base is a fork from https://github.com/med-air/3DSAM-adapter
+
+
 # 3DSAM-adapter: Holistic Adaptation of SAM from 2D to 3D for Promptable Medical Image Segmentation
 
 Implementation for the paper [3DSAM-adapter: Holistic Adaptation of SAM from 2D to 3D for Promptable Medical Image Segmentation](https://arxiv.org/pdf/2306.13465.pdf)
