@@ -31,15 +31,20 @@ class MLAHead(nn.Module):
                      nn.ReLU())
 
     def forward(self, mla_p2, mla_p3, mla_p4, mla_p5, scale_factor):
+        print(f"----------------------------------\nMLAHead shapes\n----------------------------------")  # Print input shape
         # head2 = self.head2(mla_p2)
         head2 = F.interpolate(self.head2(
             mla_p2), scale_factor = scale_factor, mode='trilinear', align_corners=True)
+        print(f"head2: {head2.shape}")  # Print shape after head2
         head3 = F.interpolate(self.head3(
             mla_p3), scale_factor = scale_factor, mode='trilinear', align_corners=True)
+        print(f"head3: {head3.shape}")  # Print shape after head3
         head4 = F.interpolate(self.head4(
             mla_p4), scale_factor = scale_factor, mode='trilinear', align_corners=True)
+        print(f"head4: {head4.shape}")  # Print shape after head4
         head5 = F.interpolate(self.head5(
             mla_p5), scale_factor = scale_factor, mode='trilinear', align_corners=True)
+        print(f"head5: {head5.shape}")  # Print shape after head5
         return torch.cat([head2, head3, head4, head5], dim=1)
 
 
@@ -64,11 +69,15 @@ class VIT_MLAHead(nn.Module):
                      nn.Conv3d(mlahead_channels, num_classes, 3, padding=1, bias=False))
 
     def forward(self, inputs, scale_factor=None):
+        print(f"----------------------------------\nVIT_MLAHead shapes\n----------------------------------")  # Print input shape
         if scale_factor == None:
             scale_factor = self.img_size / inputs[0].shape[-1]
         x = self.mlahead(inputs[0], inputs[1], inputs[2], inputs[3], scale_factor = scale_factor)
+        print(f"shape after mlahead: {x.shape}")  # Print shape after mlahead
         x = torch.cat([x, inputs[-1]], dim=1)
+        print(f"shape after torch.cat: {x.shape}")  # Print shape after cat
         x = self.cls(x)
+        print(f"shape after self.cls: {x.shape}")  # Print shape after cls
         return x
 
 
@@ -93,8 +102,13 @@ class VIT_MLAHead_h(nn.Module):
                      nn.Conv3d(mlahead_channels, num_classes, 3, padding=1, bias=False))
 
     def forward(self, inputs, scale_factor1, scale_factor2):
+        print(f"----------------------------------\nVIT_MLAHead_h shapes\n----------------------------------")  # Print input shape
         x = self.mlahead(inputs[0], inputs[1], inputs[2], inputs[3], scale_factor = scale_factor1)
+        print(f"shape after mlahead: {x.shape}")  # Print shape after mlahead
         x = torch.cat([x, inputs[-1]], dim=1)
+        print(f"shape after torch.cat: {x.shape}")  # Print shape after cat
         x = self.cls(x)
+        print(f"shape after self.cls: {x.shape}")  # Print shape after cls
         x = F.interpolate(x, scale_factor = scale_factor2, mode='trilinear', align_corners=True)
+        print(f"shape after F.interpolate: {x.shape}")  # Print shape after interpolate
         return x

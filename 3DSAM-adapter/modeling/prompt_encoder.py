@@ -16,10 +16,13 @@ class LayerNorm3d(nn.Module):
         self.eps = eps
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        print(f"----------------------------------\nLayerNorm3d shapes\n----------------------------------")  # Print input shape
+        print(f"input shape: {x.shape}")  # Print shape after input
         u = x.mean(1, keepdim=True)
-        s = (x - u).pow(2).mean(1, keepdim=True)
+        s = (x - u).pow(2).mean(1, keepdim=True)    
         x = (x - u) / torch.sqrt(s + self.eps)
         x = self.weight[:, None, None, None] * x + self.bias[:, None, None, None]
+        print(f"output shape: {x.shape}")  # Print shape after weight
         return x
 
 class Adapter(nn.Module):
@@ -30,7 +33,10 @@ class Adapter(nn.Module):
         )
 
     def forward(self, features):
+        print(f"----------------------------------\nPrompt Encoder Adapter shapes\n----------------------------------")  # Print input shape
+        print(f"input features shape: {features.shape}")  # Print shape of features
         out = features + self.model(features)
+        print(f"output shape: {out.shape}")  # Print shape after output
         return out
 
 
@@ -54,10 +60,14 @@ class MLP(nn.Module):
         self.sigmoid_output = sigmoid_output
 
     def forward(self, x):
+        print(f"----------------------------------\nMLP shapes\n----------------------------------")  # Print input shape
+        print(f"input shape: {x.shape}")  # Print shape of input
         for i, layer in enumerate(self.layers):
             x = F.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
+            print(f"output shape without sigmoid activation: {x.shape}")  # Print shape after output
         if self.sigmoid_output:
             x = F.sigmoid(x)
+            print(f"output shape with sigmoid activation: {x.shape}")  # Print shape after sigmoid
         return x
 
 
@@ -136,6 +146,8 @@ class TwoWayTransformer(nn.Module):
                 image_pe,
                 point_pe,
             )
+        print(f"----------------------------------\nTwoWayTransformer Block\n----------------------------------")  # Print input shape
+        print(f"image_embedding output shape: {image_embedding.shape}")  # Print shape of image_embedding
         return image_embedding
 
 
@@ -180,7 +192,11 @@ class TwoWayAttentionBlock(nn.Module):
         self.global_query = nn.parameter.Parameter(data=0.1 * torch.randn(1, 10, embedding_dim))
 
     def forward(self, img_embed, point_embed, img_pe, point_pe) -> Tuple[Tensor, Tensor]:
-
+        print(f"----------------------------------\nTwoWayAttentionBlock shapes\n----------------------------------")  # Print input shape
+        print(f"img_embed shape: {img_embed.shape}")  # Print shape of img_embed
+        print(f"point_embed shape: {point_embed.shape}")  # Print shape of point_embed
+        print(f"img_pe shape: {img_pe.shape}")  # Print shape of img_pe
+        print(f"point_pe shape: {point_pe.shape}")  # Print shape of point_pe
         q = torch.cat([self.global_query, point_embed], dim=1)
         self_out = self.self_attn(q=q, k=q, v=q)
         self_out = self.norm1(self_out)
@@ -192,15 +208,20 @@ class TwoWayAttentionBlock(nn.Module):
         queries = queries[:, :10, :]
 
         # MLP block
+        print(f"---\nMLP Block\n---")  # Print input shape
         mlp_out = self.mlp(queries)
+        print(f"mlp_out shape: {mlp_out.shape}")  # Print shape of mlp_out
         queries = queries + mlp_out
         queries = self.norm3(queries)
+        print(f"queries shape: {queries.shape}")  # Print shape of queries
 
         # Cross attention block, image embedding attending to tokens
+        print(f"---\nCross attention block\n---")  # Print input shape
         attn_out = self.cross_attn_image_to_token(q=img_embed, k=queries, v=queries)
         keys = img_embed + attn_out
         keys = self.norm4(keys)
-
+        print(f"Output keys shape: {keys.shape}")  # Print shape of keys
+        print(f"Output point_embed shape: {point_embed.shape}")  # Print shape of point_embed
         return keys, point_embed
 
 
@@ -239,6 +260,10 @@ class Attention(nn.Module):
 
     def forward(self, q: Tensor, k: Tensor, v: Tensor) -> Tensor:
         # Input projections
+        print(f"----------------------------------\nAttention shapes\n----------------------------------")  # Print input shape
+        print(f"q shape: {q.shape}")  # Print shape of q
+        print(f"k shape: {k.shape}")  # Print shape of k
+        print(f"v shape: {v.shape}")  # Print shape of v
         q = self.q_proj(q)
         k = self.k_proj(k)
         v = self.v_proj(v)
@@ -258,7 +283,7 @@ class Attention(nn.Module):
         out = attn @ v
         out = self._recombine_heads(out)
         out = self.out_proj(out)
-
+        print(f"Output shape: {out.shape}")  # Print shape of out
         return out
 
 
@@ -275,7 +300,11 @@ class MLPBlock(nn.Module):
         self.act = act()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.lin2(self.act(self.lin1(x)))
+        print(f"----------------------------------\nMLPBlock shapes\n----------------------------------")  # Print input shape
+        print(f"x shape: {x.shape}")  # Print shape of x
+        out = self.lin2(self.act(self.lin1(x)))
+        print(f"Output shape: {out.shape}")  # Print shape of out
+        return out
 
 
 class PromptEncoder(nn.Module):
@@ -337,9 +366,14 @@ class PromptEncoder(nn.Module):
         point_coord[:, :, 1] = (point_coord[:, :, 1]+0.5) * 2 / img_size[1] - 1
         point_coord[:, :, 2] = (point_coord[:, :, 2]+0.5) * 2 / img_size[0] - 1
         point_coord = point_coord.reshape(1,1,1,-1,3)
+        print(f"----------------------------------\nPrompt Encoder shapes\n----------------------------------")  # Print input shape
+        print(f"image_embeddings shape: {image_embeddings.shape}")  # Print shape of image_embeddings
+        print(f"image_pe shape: {image_pe.shape}")  # Print shape of image_pe
+        print(f"point_coord shape: {point_coord.shape}")  # Print shape of point_coord
         features = self.transformer(image_embeddings, image_pe, point_coord)
+        print(f"features shape: {features.shape}")  # Print shape after transformer
         features = features.transpose(1,2).reshape([1, -1] + feat_size)
-
+        print(f"reshaped features shape: {features.shape}")  # Print shape after reshaping
         return features
 
     def _pe_encoding(self, coords: torch.Tensor) -> torch.Tensor:

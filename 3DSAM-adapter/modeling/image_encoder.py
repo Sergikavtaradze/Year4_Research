@@ -19,15 +19,25 @@ class Adapter(nn.Module):
         self.linear2 = nn.Linear(mid_dim, input_dim)
 
     def forward(self, features):
+        print(f"----------------------------------\nAdapter shapes\n----------------------------------")  # Print input shape
         out = self.linear1(features)
+        print(f"After linear1: {out.shape}")  # Print shape after linear1
         out = F.relu(out)
+        print(f"After relu: {out.shape}")  # Print shape after relu
         out = out.permute(0, 4, 1, 2, 3)
+        print(f"After permute: {out.shape}")  # Print shape after permute
         out = self.conv(out)
+        print(f"After conv: {out.shape}")  # Print shape after conv
         out = out.permute(0, 2, 3, 4, 1)
+        print(f"After permute: {out.shape}")  # Print shape after permute
         out = F.relu(out)
+        print(f"After relu: {out.shape}")  # Print shape after relu
         out = self.linear2(out)
+        print(f"After linear2: {out.shape}")  # Print shape after linear2
         out = F.relu(out)
+        print(f"After relu: {out.shape}")  # Print shape after relu
         out = features + out
+        print(f"After adding: {out.shape}")  # Print shape after adding
         return out
 
 class LayerNorm3d(nn.Module):
@@ -137,34 +147,40 @@ class ImageEncoderViT_3d(nn.Module):
             )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        print(f"----------------------------------\nImageEncoderViT_3d shapes\n----------------------------------")  # Print input shape
         with torch.no_grad():
             x = self.patch_embed(x)
+            print(f"After patch embedding: {x.shape}")  # Print shape after patch embedding
         if self.num_slice > 1:
             x = self.slice_embed(x.permute(3, 1, 2, 0).unsqueeze(0))
+            print(f"After slice embedding: {x.shape}")  # Print shape after slice embedding
             x = x.permute(0, 2, 3, 4, 1)
         else:
             x = x.permute(1, 2, 0, 3).unsqueeze(0)
-
 
         if self.pos_embed is not None:
             pos_embed = F.avg_pool2d(self.pos_embed.permute(0,3,1,2), kernel_size=2).permute(0,2,3,1).unsqueeze(3)
             pos_embed = pos_embed + (self.depth_embed.unsqueeze(1).unsqueeze(1))
             x = x + pos_embed
+            print(f"After adding positional embedding: {x.shape}")  # Print shape after adding positional embedding
 
         idx = 0
         feature_list = []
         for blk in self.blocks[:6]:
             x = blk(x)
+            print(f"After block {idx + 1}: {x.shape}")  # Print shape after each block
             idx += 1
             if idx % 3 == 0 and idx != 12:
                 feature_list.append(self.neck_3d[idx//3-1](x.permute(0, 4, 1, 2, 3)))
         for blk in self.blocks[6:12]:
             x = blk(x)
+            print(f"After block {idx + 1}: {x.shape}")  # Print shape after each block
             idx += 1
             if idx % 3 == 0 and idx != 12:
                 feature_list.append(self.neck_3d[idx//3-1](x.permute(0, 4, 1, 2, 3)))
 
         x = self.neck_3d[-1](x.permute(0, 4, 1, 2, 3))
+        print(f"Final output shape: {x.shape}")  # Print final output shape
         return x, feature_list
 
 class ImageEncoderViT_3d_v2(nn.Module):
@@ -266,35 +282,40 @@ class ImageEncoderViT_3d_v2(nn.Module):
             ))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        print(f"----------------------------------\nImageEncoderViT_3d_v2 shapes\n----------------------------------")  # Print input shape
         with torch.no_grad():
             x = self.patch_embed(x)
+            print(f"After patch embedding: {x.shape}")  # Print shape after patch embedding
         if self.num_slice > 1:
             x = self.slice_embed(x.permute(3, 1, 2, 0).unsqueeze(0))
+            print(f"After slice embedding: {x.shape}")  # Print shape after slice embedding
             x = x.permute(0, 2, 3, 4, 1)
         else:
             x = x.permute(1, 2, 0, 3).unsqueeze(0)
-
 
         if self.pos_embed is not None:
             pos_embed = F.avg_pool2d(self.pos_embed.permute(0,3,1,2), kernel_size=2).permute(0,2,3,1).unsqueeze(3)
             pos_embed = pos_embed + (self.depth_embed.unsqueeze(1).unsqueeze(1))
             x = x + pos_embed
+            print(f"After adding positional embedding: {x.shape}")  # Print shape after adding positional embedding
 
         idx = 0
         feature_list = []
         for blk in self.blocks[:6]:
             x = blk(x)
+            print(f"After block {idx + 1}: {x.shape}")  # Print shape after each block
             idx += 1
             if idx % 3 == 0 and idx != 12:
                 feature_list.append(self.neck_3d[idx//3-1](x.permute(0, 4, 1, 2, 3)))
         for blk in self.blocks[6:12]:
             x = blk(x)
+            print(f"After block {idx + 1}: {x.shape}")  # Print shape after each block
             idx += 1
             if idx % 3 == 0 and idx != 12:
                 feature_list.append(self.neck_3d[idx//3-1](x.permute(0, 4, 1, 2, 3)))
 
         x = self.neck_3d[-1](x.permute(0, 4, 1, 2, 3))
-
+        print(f"Final output shape: {x.shape}")  # Print final output shape
         return x, feature_list
 
 
@@ -377,24 +398,32 @@ class Block_3d(nn.Module):
         self.adapter = Adapter(input_dim=dim, mid_dim=dim // 2)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        print(f"----------------------------------\nBlock_3d shapes\n----------------------------------")  # Print input shape
         x = self.adapter(x)
+        print(f"After adapter: {x.shape}")  # Print shape after adapter
         shortcut = x
         x = self.norm1(x)
+        print(f"After norm1: {x.shape}")  # Print shape after first normalization
         # Window partition
         if self.window_size > 0:
             H, W, D = x.shape[1], x.shape[2], x.shape[3]
             if self.shift_size > 0:
                 x = torch.roll(x, shifts=(-self.shift_size, -self.shift_size, -self.shift_size), dims=(1,2,3))
             x, pad_hw = window_partition(x, self.window_size)
+            print(f"After window partition: {x.shape}")  # Print shape after window partition
         x = self.attn(x, mask=self.attn_mask)
+        print(f"After attention: {x.shape}")  # Print shape after attention
         # Reverse window partition
         if self.window_size > 0:
             x = window_unpartition(x, self.window_size, pad_hw, (H, W, D))
+            print(f"After window unpartition: {x.shape}")  # Print shape after window unpartition
         if self.shift_size > 0:
             x = torch.roll(x, shifts=(self.shift_size, self.shift_size, self.shift_size), dims=(1,2,3))
 
         x = shortcut + x
+        print(f"After adding shortcut: {x.shape}")  # Print shape after adding shortcut
         x = x + self.mlp(self.norm2(x))
+        print(f"After mlp: {x.shape}")  # Print shape after MLP
         return x
 
 
@@ -441,19 +470,25 @@ class Attention_3d(nn.Module):
             self.lr = nn.Parameter(torch.tensor(1.))
 
     def forward(self, x: torch.Tensor, mask=None) -> torch.Tensor:
+        print(f"----------------------------------\nAttention_3d shapes\n----------------------------------")  # Print input shape
         B, H, W, D, _ = x.shape
+        print(f"Input shape: {x.shape}")  # Print input shape
         # qkv with shape (3, B, nHead, H * W, C)
         qkv = self.qkv(x).reshape(B, H * W * D, 3, self.num_heads, -1).permute(2, 0, 3, 1, 4)
+        print(f"After qkv: {qkv.shape}")  # Print shape after qkv
         # q, k, v with shape (B * nHead, H * W, C)
         q, k, v = qkv[0], qkv[1], qkv[2]
         #q, k, v = qkv.reshape(3, B * self.num_heads, H * W * D, -1).unbind(0)
         q_sub = q.reshape(B * self.num_heads, H * W * D, -1)
 
         attn = (q * self.scale) @ k.transpose(-2, -1)
+        print(f"After attention calculation: {attn.shape}")  # Print shape after attention calculation
 
         if self.use_rel_pos:
             attn = add_decomposed_rel_pos(attn, q_sub, self.rel_pos_h, self.rel_pos_w, self.rel_pos_d, (H, W, D), (H, W, D), self.lr)
             attn = attn.reshape(B, self.num_heads, H * W * D, -1)
+            print(f"After adding relative position: {attn.shape}")  # Print shape after adding relative position
+
         if mask is None:
             attn = attn.softmax(dim=-1)
         else:
@@ -461,8 +496,11 @@ class Attention_3d(nn.Module):
             attn = attn.view(B // nW, nW, self.num_heads, H*W*D, H*W*D) + mask.unsqueeze(1).unsqueeze(0)
             attn = attn.view(-1, self.num_heads, H*W*D, H*W*D)
             attn = attn.softmax(dim=-1)
+
         x = (attn @ v).view(B, self.num_heads, H, W, D, -1).permute(0, 2, 3, 4, 1, 5).reshape(B, H, W, D, -1)
+        print(f"After applying attention to values: {x.shape}")  # Print shape after applying attention to values
         x = self.proj(x)
+        print(f"After projection: {x.shape}")  # Print shape after projection
 
         return x
 
