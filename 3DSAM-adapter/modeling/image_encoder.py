@@ -23,21 +23,20 @@ class Adapter(nn.Module):
         out = self.linear1(features)
         print(f"After linear1: {out.shape}")  # Print shape after linear1
         out = F.relu(out)
-        print(f"After relu: {out.shape}")  # Print shape after relu
         out = out.permute(0, 4, 1, 2, 3)
         print(f"After permute: {out.shape}")  # Print shape after permute
-        out = self.conv(out)
-        print(f"After conv: {out.shape}")  # Print shape after conv
+        out = self.conv(out) # Doesnt change shape in_channels = out_channels
+        # print(f"After conv: {out.shape}")  # Print shape after conv
         out = out.permute(0, 2, 3, 4, 1)
         print(f"After permute: {out.shape}")  # Print shape after permute
         out = F.relu(out)
-        print(f"After relu: {out.shape}")  # Print shape after relu
+        # print(f"After relu: {out.shape}")  # Print shape after relu
         out = self.linear2(out)
-        print(f"After linear2: {out.shape}")  # Print shape after linear2
+        print(f"After linear2, shape of the output: {out.shape}")  # Print shape after linear2
         out = F.relu(out)
-        print(f"After relu: {out.shape}")  # Print shape after relu
+        # print(f"After relu: {out.shape}")  # Print shape after relu
         out = features + out
-        print(f"After adding: {out.shape}")  # Print shape after adding
+        #print(f"After adding: {out.shape}")  # Print shape after adding
         return out
 
 class LayerNorm3d(nn.Module):
@@ -398,12 +397,12 @@ class Block_3d(nn.Module):
         self.adapter = Adapter(input_dim=dim, mid_dim=dim // 2)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        print(f"----------------------------------\nBlock_3d shapes\n----------------------------------")  # Print input shape
         x = self.adapter(x)
-        print(f"After adapter: {x.shape}")  # Print shape after adapter
+        print(f"----------------------------------\nBlock_3d shapes\n----------------------------------")  # Print input shape
+        print(f"After adapter input into the block: {x.shape}")  # Print shape after adapter
         shortcut = x
-        x = self.norm1(x)
-        print(f"After norm1: {x.shape}")  # Print shape after first normalization
+        x = self.norm1(x) # Norm doesn't change shape
+        #print(f"After norm1: {x.shape}")  # Print shape after first normalization
         # Window partition
         if self.window_size > 0:
             H, W, D = x.shape[1], x.shape[2], x.shape[3]
@@ -498,7 +497,7 @@ class Attention_3d(nn.Module):
             attn = attn.softmax(dim=-1)
 
         x = (attn @ v).view(B, self.num_heads, H, W, D, -1).permute(0, 2, 3, 4, 1, 5).reshape(B, H, W, D, -1)
-        print(f"After applying attention to values: {x.shape}")  # Print shape after applying attention to values
+        # Same as the next print(f"After applying attention to values: {x.shape}")  # Print shape after applying attention to values
         x = self.proj(x)
         print(f"After projection: {x.shape}")  # Print shape after projection
 

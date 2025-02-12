@@ -35,13 +35,13 @@ class MLAHead(nn.Module):
         # head2 = self.head2(mla_p2)
         head2 = F.interpolate(self.head2(
             mla_p2), scale_factor = scale_factor, mode='trilinear', align_corners=True)
-        print(f"head2: {head2.shape}")  # Print shape after head2
+        
         head3 = F.interpolate(self.head3(
             mla_p3), scale_factor = scale_factor, mode='trilinear', align_corners=True)
-        print(f"head3: {head3.shape}")  # Print shape after head3
+       
         head4 = F.interpolate(self.head4(
             mla_p4), scale_factor = scale_factor, mode='trilinear', align_corners=True)
-        print(f"head4: {head4.shape}")  # Print shape after head4
+        
         head5 = F.interpolate(self.head5(
             mla_p5), scale_factor = scale_factor, mode='trilinear', align_corners=True)
         print(f"head5: {head5.shape}")  # Print shape after head5

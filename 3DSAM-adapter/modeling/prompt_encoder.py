@@ -208,7 +208,6 @@ class TwoWayAttentionBlock(nn.Module):
         queries = queries[:, :10, :]
 
         # MLP block
-        print(f"---\nMLP Block\n---")  # Print input shape
         mlp_out = self.mlp(queries)
         print(f"mlp_out shape: {mlp_out.shape}")  # Print shape of mlp_out
         queries = queries + mlp_out
